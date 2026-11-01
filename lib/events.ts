@@ -3,10 +3,11 @@ export function trackIntent(
   action: "whatsapp_click" | "form_whatsapp_open",
   source: string,
   equipmentId?: string,
+  serviceId?: string,
 ) {
   window.dispatchEvent(
     new CustomEvent("clj:conversion", {
-      detail: { action, source, equipmentId },
+      detail: { action, source, equipmentId, serviceId },
     }),
   );
 }

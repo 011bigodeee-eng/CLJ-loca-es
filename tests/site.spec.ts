@@ -135,7 +135,7 @@ test("form validates and formats a message without sending data", async ({
   await page.getByLabel("Empresa").fill("Empresa teste");
   await page.getByLabel("Telefone", { exact: false }).fill("(16) 99999-9999");
   await page
-    .getByLabel("Equipamento de interesse")
+    .getByLabel("Serviço ou equipamento de interesse")
     .selectOption({ label: "Caminhão prancha" });
   await page
     .getByLabel("Sua mensagem")

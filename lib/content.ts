@@ -83,11 +83,17 @@ export const equipment: Equipment[] = [
 export const navigation = [
   ["inicio", "Início"],
   ["sobre", "Sobre"],
-  ["equipamentos", "Equipamentos"],
   ["solucoes", "Soluções"],
+  ["equipamentos", "Equipamentos"],
   ["como-funciona", "Como funciona"],
   ["contato", "Contato"],
 ] as const;
 export function whatsappUrl(message: string) {
   return `https://wa.me/${company.whatsapp}?text=${encodeURIComponent(message)}`;
+}
+
+export function quoteMessage(subject?: string) {
+  return subject
+    ? `Olá! Conheci o site da CLJ e gostaria de solicitar um orçamento para ${subject}.`
+    : "Olá! Conheci o site da CLJ e gostaria de solicitar um orçamento.";
 }

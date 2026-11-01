@@ -36,7 +36,7 @@ A abertura continua no HTML inicial, com decisão no `<head>`, antes da pintura,
 
 O WhatsApp flutuante recolhe na hero, catálogo, vitrine diagonal, soluções, seção de impacto, contato e rodapé no mobile, onde já existem ações próprias.
 
-## Evidência de validação
+## Evidência da correção mobile — commit bec80d6
 
 - Build de produção e TypeScript aprovados.
 - 34 testes Playwright passaram: oito larguras (320, 360, 375, 390, 430, 768, 1024 e 1440), incluindo emulação de toque nos perfis 375 × 667, 390 × 844, 430 × 932 e 360 × 800.
@@ -48,3 +48,5 @@ O WhatsApp flutuante recolhe na hero, catálogo, vitrine diagonal, soluções, s
 - CLS observado igual a 0 nas capturas locais de 375, 390 e 430 px após carregar fontes e imagem. Esse resultado não representa todas as condições de rede ou aparelhos físicos.
 
 Safari iOS nativo não está disponível neste ambiente. As verificações de smartphone usam Chromium com emulação de viewport, DPR e toque; não foram executadas em iPhones físicos. A confirmação no Safari real continua recomendada antes da publicação definitiva.
+
+A atualização comercial posterior reorganiza o conteúdo e acrescenta quatro áreas reais. Por isso, a altura total histórica acima não descreve a página comercial atual. Consulte [a organização atual e sua validação](services.md). A hero e as regras de composição mobile foram preservadas.

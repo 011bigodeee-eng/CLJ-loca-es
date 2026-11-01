@@ -25,9 +25,6 @@ import {
   Menu,
   X,
   Search,
-  Truck,
-  HardHat,
-  MoveUpRight,
   MessageCircle,
   Check,
   Volume2,
@@ -41,9 +38,12 @@ import {
   categories,
   navigation,
   whatsappUrl,
+  quoteMessage,
   type Equipment,
 } from "@/lib/content";
 import { trackIntent } from "@/lib/events";
+import { services, detailedServices } from "@/lib/services";
+import { ServiceOverview, ServiceIcon } from "@/components/services";
 import {
   MobileMotionProvider,
   useMobileMotion,
@@ -76,22 +76,29 @@ function WhatsAppLink({
   children,
   className = "",
   source,
-  message = "Olá! Gostaria de conversar sobre uma locação com a CLJ.",
+  message = quoteMessage(),
   equipmentId,
+  serviceId,
+  ariaLabel,
 }: {
   children: React.ReactNode;
   className?: string;
   source: string;
   message?: string;
   equipmentId?: string;
+  serviceId?: string;
+  ariaLabel?: string;
 }) {
   return (
     <a
       className={className}
+      aria-label={ariaLabel}
       href={whatsappUrl(message)}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => trackIntent("whatsapp_click", source, equipmentId)}
+      onClick={() =>
+        trackIntent("whatsapp_click", source, equipmentId, serviceId)
+      }
     >
       {children}
     </a>
@@ -275,7 +282,8 @@ function Header() {
     const observer = new IntersectionObserver(
       (entries) =>
         entries.forEach((e) => {
-          if (e.isIntersecting) setActive(e.target.id);
+          if (e.isIntersecting)
+            setActive(e.target.getAttribute("data-nav-section") || e.target.id);
         }),
       { rootMargin: "-15% 0px -55% 0px" },
     );
@@ -283,6 +291,9 @@ function Header() {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
+    document
+      .querySelectorAll("[data-nav-section]")
+      .forEach((element) => observer.observe(element));
     return () => {
       window.removeEventListener("scroll", onScroll);
       observer.disconnect();
@@ -338,9 +349,12 @@ function Header() {
             </a>
           ))}
         </nav>
-        <a className="button button-small header-cta" href="#contato">
+        <WhatsAppLink
+          className="button button-small header-cta"
+          source="header-quote"
+        >
           Solicitar orçamento <ArrowUpRight size={17} />
-        </a>
+        </WhatsAppLink>
         <button
           ref={menuButton}
           className="menu-toggle"
@@ -447,17 +461,17 @@ function Hero({ ready }: { ready: boolean }) {
             </span>{" "}
             <ArrowUpRight size={20} />
           </a>
-          <a
-            href="#contato"
+          <WhatsAppLink
+            source="hero-quote"
             className="button button-outline"
-            aria-label="Solicitar orçamento"
+            ariaLabel="Solicitar orçamento"
           >
             <span className="desktop-label">Solicitar orçamento</span>
             <span className="mobile-label" aria-hidden="true">
               Orçamento
             </span>{" "}
             <ArrowRight size={18} />
-          </a>
+          </WhatsAppLink>
         </div>
         <div className="hero-note">
           <span className="note-rule" /> O EQUIPAMENTO CERTO. O PRÓXIMO PASSO DO
@@ -511,13 +525,13 @@ function About() {
           QUE MOVEM.
         </h2>
         <p>
-          Cada operação começa com uma necessidade. A CLJ Locações e Soluções
-          aproxima seu projeto das possibilidades em caminhões, equipamentos e
-          transporte.
+          A CLJ Locações e Soluções reúne frentes de transporte, locação de
+          equipamentos, movimentação de cargas e apoio operacional para
+          conversar sobre as necessidades do seu projeto.
         </p>
         <p>
           Uma conversa direta para entender sua demanda, apresentar opções e
-          alinhar as condições da locação com a equipe comercial.
+          alinhar os próximos passos com a equipe comercial.
         </p>
         <div className="about-principles">
           <span>
@@ -596,7 +610,7 @@ function EquipmentModal({
             className="button"
             source="equipment-details"
             equipmentId={item.id}
-            message={`Olá! Gostaria de solicitar um orçamento para locação de ${item.name}.`}
+            message={quoteMessage(item.name)}
           >
             Solicitar orçamento <ArrowUpRight size={19} />
           </WhatsAppLink>
@@ -791,7 +805,7 @@ function Catalog() {
                       source="mobile-equipment-options"
                       equipmentId={item.id}
                       className="button"
-                      message={`Olá! Gostaria de solicitar um orçamento para locação de ${item.name}.`}
+                      message={quoteMessage(item.name)}
                     >
                       Solicitar orçamento <ArrowUpRight size={18} />
                     </WhatsAppLink>
@@ -855,35 +869,14 @@ function Catalog() {
     </section>
   );
 }
-const solutions = [
-  {
-    number: "01",
-    title: "Caminhões",
-    icon: Truck,
-    text: "Converse sobre a locação de caminhões e as necessidades do seu projeto.",
-    category: "Caminhões",
-  },
-  {
-    number: "02",
-    title: "Equipamentos",
-    icon: HardHat,
-    text: "Apresente sua operação e explore possibilidades em equipamentos.",
-    category: "Máquinas pesadas",
-  },
-  {
-    number: "03",
-    title: "Transporte",
-    icon: MoveUpRight,
-    text: "Compartilhe o que precisa movimentar e alinhe as condições com a equipe.",
-    category: "Transporte",
-  },
-];
 function SolutionPanel({
   children,
   index,
+  serviceId,
 }: {
   children: React.ReactNode;
   index: number;
+  serviceId?: string;
 }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
@@ -904,6 +897,8 @@ function SolutionPanel({
     <motion.article
       ref={ref}
       className="solution-card solution-panel"
+      id={serviceId}
+      aria-labelledby={serviceId ? `${serviceId}-title` : undefined}
       style={
         {
           top: 110 + index * 18,
@@ -918,53 +913,62 @@ function SolutionPanel({
     </motion.article>
   );
 }
-function Solutions() {
+function ServiceDetails() {
   return (
-    <section id="solucoes" className="section solutions container">
+    <section
+      id="areas-em-detalhe"
+      data-nav-section="solucoes"
+      className="section solutions service-detail-section container"
+      aria-labelledby="service-details-title"
+    >
       <Reveal className="section-heading">
         <div>
           <div className="eyebrow">
-            <span className="short-line" /> SOLUÇÕES QUE CONECTAM
+            <span className="short-line" /> CONHEÇA AS POSSIBILIDADES
           </div>
-          <h2>
-            DIFERENTES DEMANDAS.
+          <h2 id="service-details-title">
+            SUA NECESSIDADE.
             <br />
-            <span className="muted">A MESMA DIREÇÃO.</span>
+            <span className="muted">O NOSSO PONTO DE PARTIDA.</span>
           </h2>
         </div>
         <p>
-          Da escolha do equipamento à conversa comercial,
-          <br />
-          um ponto de contato para o seu próximo projeto.
+          Conte o contexto da sua operação.
+          <br />A equipe comercial ajuda a esclarecer os próximos passos.
         </p>
       </Reveal>
       <div className="solutions-grid solutions-stack">
-        {solutions.map(({ number, title, icon: Icon, text, category }, i) => (
-          <SolutionPanel key={title} index={i}>
+        {detailedServices.map((service, index) => (
+          <SolutionPanel key={service.id} index={index} serviceId={service.id}>
             <div className="solution-photo">
               <Image
-                src={i === 1 ? "/images/excavator.webp" : "/images/truck.webp"}
-                alt={`Cena ilustrativa de ${title.toLowerCase()} gerada por IA`}
+                src={service.image}
+                alt={service.imageAlt}
                 fill
-                sizes="(max-width: 768px) 100vw, 75vw"
+                sizes="(max-width:768px) 100vw,75vw"
+                quality={90}
+                style={{ objectPosition: service.position }}
               />
             </div>
             <div className="solution-top">
-              <Icon size={26} strokeWidth={1.4} />
-              <span>{number}</span>
+              <ServiceIcon id={service.id} />
+              <span>0{index + 1}</span>
             </div>
             <div className="solution-copy">
-              <h3>{title}</h3>
-              <p>{text}</p>
-              <a
-                href={`/?categoria=${encodeURIComponent(category)}#equipamentos`}
-                aria-label={`Explorar ${title.toLowerCase()}`}
-                className="solution-link"
+              <h3 id={`${service.id}-title`}>{service.title}</h3>
+              <p>{service.detail}</p>
+              <WhatsAppLink
+                source="service-details"
+                serviceId={service.id}
+                message={quoteMessage(service.title)}
+                className="button service-detail-quote"
               >
-                <ArrowUpRight size={24} />
-              </a>
+                Solicitar orçamento <ArrowUpRight size={19} />
+              </WhatsAppLink>
             </div>
-            <span className="solution-demo">IMAGEM ILUSTRATIVA · IA</span>
+            <span className="solution-demo">
+              IMAGEM ILUSTRATIVA · IA · CONDIÇÕES A CONFIRMAR
+            </span>
           </SolutionPanel>
         ))}
       </div>
@@ -974,8 +978,8 @@ function Solutions() {
 function Process() {
   const steps = [
     [
-      "Escolha o equipamento",
-      "Explore o catálogo demonstrativo e identifique sua necessidade.",
+      "Escolha uma solução",
+      "Conheça as áreas de atuação ou explore o catálogo demonstrativo e identifique sua necessidade.",
     ],
     [
       "Solicite um orçamento",
@@ -996,7 +1000,7 @@ function Process() {
         <Reveal className="section-heading">
           <div>
             <div className="eyebrow">
-              <span className="short-line" /> DO PROJETO À CONVERSA
+              <span className="short-line" /> COMO SOLICITAR UM ORÇAMENTO
             </div>
             <h2>
               SIMPLES PARA VOCÊ.
@@ -1107,7 +1111,7 @@ function Contact() {
       );
       return;
     }
-    const text = `Olá! Gostaria de solicitar um orçamento com a CLJ.\n\nNome: ${name}\n${data.get("company") ? `Empresa: ${String(data.get("company")).trim()}\n` : ""}Telefone: ${phone}\nEquipamento de interesse: ${interest}\n\nMensagem: ${message}`;
+    const text = `${quoteMessage()}\n\nNome: ${name}\n${data.get("company") ? `Empresa: ${String(data.get("company")).trim()}\n` : ""}Telefone: ${phone}\nServiço ou equipamento de interesse: ${interest}\n\nMensagem: ${message}`;
     trackIntent("form_whatsapp_open", "contact-form");
     const opened = window.open(
       whatsappUrl(text),
@@ -1200,14 +1204,21 @@ function Contact() {
               />
             </label>
             <label>
-              Equipamento de interesse <span>*</span>
+              Serviço ou equipamento de interesse <span>*</span>
               <select name="equipment" required defaultValue="">
                 <option value="" disabled>
                   Selecione uma opção
                 </option>
-                {equipment.map((e) => (
-                  <option key={e.id}>{e.name}</option>
-                ))}
+                <optgroup label="Áreas de atuação">
+                  {services.map((service) => (
+                    <option key={service.id}>{service.title}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Equipamentos demonstrativos">
+                  {equipment.map((e) => (
+                    <option key={e.id}>{e.name}</option>
+                  ))}
+                </optgroup>
                 <option>Quero conversar sobre meu projeto</option>
               </select>
             </label>
@@ -1271,7 +1282,9 @@ function Footer() {
           <div className="footer-links">
             <span>SEU PRÓXIMO PASSO</span>
             <a href="#como-funciona">Como funciona</a>
-            <a href="#contato">Solicitar orçamento</a>
+            <WhatsAppLink source="footer-quote">
+              Solicitar orçamento
+            </WhatsAppLink>
             <WhatsAppLink source="footer">
               Fale com a CLJ <ArrowUpRight size={14} />
             </WhatsAppLink>
@@ -1306,7 +1319,7 @@ function FloatingContact() {
     document
       .querySelectorAll(
         mobile.mobile
-          ? "#inicio, #equipamentos, .equipment-journey, #solucoes, .expanding-impact, #contato, .footer"
+          ? "#inicio, #equipamentos, .equipment-journey, #solucoes, #areas-em-detalhe, .expanding-impact, #contato, .footer"
           : "#inicio, .equipment-journey, #contato, .footer",
       )
       .forEach((element) => observer.observe(element));
@@ -1371,16 +1384,17 @@ function SiteContent() {
                 CONSTRUIR JUNTOS.
               </span>
               <span>
-                Conteúdo e equipamentos demonstrativos{" "}
+                Áreas de atuação informadas · equipamentos ilustrativos{" "}
                 <ArrowUpRight size={15} />
               </span>
             </div>
           </div>
           <About />
-          <DepthShowcase />
+          <ServiceOverview />
           <Catalog />
+          <DepthShowcase />
           <EquipmentJourney />
-          <Solutions />
+          <ServiceDetails />
           <Process />
           <Impact />
           <Contact />

@@ -14,7 +14,7 @@ import {
   useTransform,
 } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
-import { equipment, whatsappUrl } from "@/lib/content";
+import { equipment, whatsappUrl, quoteMessage } from "@/lib/content";
 import { operationMedia, visualEquipmentIds } from "@/lib/media";
 import { trackIntent } from "@/lib/events";
 import type { LiquidRenderer } from "./liquid-renderer";
@@ -459,9 +459,7 @@ export function EquipmentJourney() {
                 <h3>{item.name}</h3>
                 <p>{item.description}</p>
                 <a
-                  href={whatsappUrl(
-                    `Olá! Gostaria de solicitar um orçamento para locação de ${item.name}.`,
-                  )}
+                  href={whatsappUrl(quoteMessage(item.name))}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() =>

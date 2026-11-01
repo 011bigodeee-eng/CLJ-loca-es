@@ -38,7 +38,7 @@ No ambiente de nuvem, Chromium está em `/usr/bin/chromium`. Em outra máquina, 
 - `public/images/ASSETS.md`: origem dos assets e orientações para substituição. As capturas recebidas não foram reutilizadas como fotografias públicas. Vídeo não fornecido; há fallback fotográfico otimizado.
 - Catálogo aceita links como `/?categoria=Transporte#equipamentos`. Categorias possuem URLs compartilháveis para futuras campanhas.
 - Formulário valida os dados e abre uma mensagem no WhatsApp. O usuário precisa revisar e enviar no WhatsApp; não há backend de envio nem confirmação falsa. Nenhum campo é armazenado no site.
-- `lib/events.ts`: eventos locais `clj:conversion`, com `whatsapp_click` e `form_whatsapp_open`, origem e ID de equipamento. Não carregam dados pessoais, pixels ou requisições de analytics. O segundo evento representa intenção de abrir o WhatsApp, não mensagem enviada.
+- `lib/events.ts`: eventos locais `clj:conversion`, com `whatsapp_click` e `form_whatsapp_open`, origem e IDs de equipamento ou serviço. Não carregam dados pessoais, pixels ou requisições de analytics. O segundo evento representa intenção de abrir o WhatsApp, não mensagem enviada.
 - Metadata básica e Open Graph. A prévia usa `noindex, nofollow` para evitar indexação prematura. Não há avaliações, números, endereço, e-mail, CNPJ ou dados estruturados inventados.
 
 ## Publicar uma prévia na Vercel
@@ -76,7 +76,7 @@ A introdução já existe no HTML do servidor. `lib/intro-bootstrap.ts` verifica
 - Vídeo futuro: poster sempre presente; reprodução silenciosa apenas perto da viewport, pausa fora dela, fallback em falha/timeout. Em movimento reduzido, economia de dados ou telas pequenas, permanece a fotografia.
 - Cards: imagens maiores, bordas discretas, linha laranja e destaque de ação no hover/foco; informações essenciais permanecem visíveis; no mobile há opções adicionais de orçamento por toque/foco, além do modal original.
 
-As duas fontes ilustrativas permanecem em 1536 × 1024; não foram substituídas nem ampliadas artificialmente. Next/Image gera AVIF/WebP e variantes até essa largura. Para melhorar a nitidez fullscreen/retina, são necessários arquivos oficiais autorizados de 2560 px ou mais. `public/images/ASSETS.md` registra a auditoria.
+Os assets ilustrativos têm 1536 × 1024. As imagens originais da hero e da escavadeira foram preservadas, e duas ilustrações de áreas comerciais foram adicionadas; nenhum arquivo foi ampliado artificialmente. Next/Image gera AVIF/WebP e variantes até essa largura. Para melhorar a nitidez fullscreen/retina, são necessários arquivos oficiais autorizados de 2560 px ou mais. `public/images/ASSETS.md` registra a auditoria.
 
 Os testes incluem primeira pintura antes da hidratação, sessão repetida, falha de scripts, JavaScript desativado, oito larguras, ausência de erros de console, filtro/modal/formulário, ScrollTrigger, expansão, painéis sticky, fallback SVG, movimento reduzido e shader real com liberação de contexto em Chromium/SwiftShader. A validação local não representa um teste em todos os dispositivos físicos ou uma confirmação do deploy na Vercel.
 
@@ -85,3 +85,9 @@ Os testes incluem primeira pintura antes da hidratação, sessão repetida, falh
 A hero para smartphones usa título de 38–54 px, CTAs de 50 px lado a lado, navbar compacta e o caminhão integrado desde o topo. `app/mobile.css` contém as regras isoladas do desktop, e `components/mobile-motion.tsx` controla preferências, breakpoints e atualização de medidas.
 
 Consulte [a matriz de efeitos e a evidência de testes](docs/mobile.md) para o comportamento de cada breakpoint, comparação do desktop, fallback de aparelhos modestos e a limitação de Safari iOS nativo neste ambiente.
+
+## Áreas comerciais e catálogo
+
+As quatro áreas informadas pelo usuário — **Transporte**, **Locação de Equipamentos**, **Movimentação de Cargas** e **Apoio Operacional** — aparecem imediatamente depois da apresentação institucional, antes do catálogo demonstrativo de equipamentos. Dados editáveis em `lib/services.ts`; a relação de equipamentos continua separada em `lib/content.ts`.
+
+O formulário aceita serviço ou equipamento, e cada área tem orçamento direto no WhatsApp com mensagem específica. Consulte [a organização comercial, os arquivos e as confirmações pendentes](docs/services.md). A captura recebida serve de referência; as novas fotografias visuais são ilustrações originais geradas por IA e identificadas no site.
