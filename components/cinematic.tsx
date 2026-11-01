@@ -6,6 +6,8 @@ import {
   motion,
   useInView,
   useMotionValue,
+  useMotionTemplate,
+  type MotionStyle,
   useReducedMotion,
   useScroll,
   useSpring,
@@ -16,6 +18,7 @@ import { equipment, whatsappUrl } from "@/lib/content";
 import { operationMedia, visualEquipmentIds } from "@/lib/media";
 import { trackIntent } from "@/lib/events";
 import type { LiquidRenderer } from "./liquid-renderer";
+import { useMobileMotion } from "./mobile-motion";
 
 /** Fluid displacement only touches the photograph, never its text or controls.
  * A short SVG pulse avoids a permanent WebGL render loop. Touch/reduced-motion
@@ -32,6 +35,29 @@ function LiquidImage() {
   const id = `liquid-${useId().replace(/:/g, "")}`;
   const reduced = useReducedMotion();
   const inView = useInView(ref);
+  const mobile = useMobileMotion();
+  const { scrollYProgress: liquidProgress } = useScroll({
+    target: ref,
+    offset: ["start 95%", "start 32%"],
+  });
+  const mobileClipId = `mobile-wave-${id}`;
+  const mobileWave = useTransform(liquidProgress, (progress) => {
+    const p = Math.max(0, Math.min(1, progress));
+    const level = (1 - p) * 0.95;
+    const wave = Math.sin(p * Math.PI) * 0.08;
+    return `M 0 ${level} C .28 ${level - wave} .72 ${level + wave} 1 ${level} L 1 1 L 0 1 Z`;
+  });
+  const mobileEdge = useTransform(liquidProgress, (progress) => {
+    const p = Math.max(0, Math.min(1, progress));
+    const level = (1 - p) * 0.95;
+    const wave = Math.sin(p * Math.PI) * 0.08;
+    return `M 0 ${level} C .28 ${level - wave} .72 ${level + wave} 1 ${level}`;
+  });
+  const edgeOpacity = useTransform(
+    liquidProgress,
+    [0, 0.15, 0.85, 1],
+    [0, 0.6, 0.5, 0],
+  );
   const reset = () => {
     generation.current++;
     loading.current?.abort();
@@ -110,6 +136,9 @@ function LiquidImage() {
         height="0"
       >
         <defs>
+          <clipPath id={mobileClipId} clipPathUnits="objectBoundingBox">
+            <motion.path d={mobileWave} />
+          </clipPath>
           <filter
             id={id}
             x="-5%"
@@ -145,6 +174,35 @@ function LiquidImage() {
           quality={90}
         />
       </div>
+      {mobile.enabled && (
+        <div
+          className="mobile-liquid-overlay"
+          data-mobile-liquid="active"
+          style={{ clipPath: `url(#${mobileClipId})` }}
+          aria-hidden="true"
+        >
+          <Image
+            src="/images/truck.webp"
+            alt=""
+            fill
+            sizes="(max-width:767px) 100vw,65vw"
+            quality={90}
+          />
+          <svg
+            className="mobile-liquid-edge"
+            viewBox="0 0 1 1"
+            preserveAspectRatio="none"
+          >
+            <motion.path
+              d={mobileEdge}
+              fill="none"
+              stroke="#ff6a00"
+              strokeWidth=".006"
+              style={{ opacity: edgeOpacity }}
+            />
+          </svg>
+        </div>
+      )}
       <canvas ref={canvas} className="liquid-canvas" aria-hidden="true" />
       <span className="photo-edge" aria-hidden="true" />
     </div>
@@ -167,6 +225,11 @@ export function DepthShowcase() {
   });
   const backY = useTransform(scrollYProgress, [0, 1], [30, -35]);
   const frontY = useTransform(scrollYProgress, [0, 1], [65, -55]);
+  const mobileFrontY = useTransform(scrollYProgress, [0, 1], [28, -28]);
+  const mobileBackY = useTransform(scrollYProgress, [0, 1], [16, -18]);
+  const mobileTilt = useTransform(scrollYProgress, [0, 1], [-1.1, 1.1]);
+  const mobileFrontTransform = useMotionTemplate`translate3d(0,${mobileFrontY}px,35px) rotateZ(${mobileTilt}deg)`;
+  const mobileBackTransform = useMotionTemplate`translate3d(0,${mobileBackY}px,15px)`;
   return (
     <section
       ref={ref}
@@ -212,7 +275,12 @@ export function DepthShowcase() {
         <div className="depth-grid" aria-hidden="true" />
         <motion.div
           className="depth-photo depth-photo-back"
-          style={reduced ? undefined : { y: backY, z: 25 }}
+          style={
+            {
+              "--depth-mobile-transform": mobileBackTransform,
+              ...(reduced ? {} : { y: backY, z: 25 }),
+            } as MotionStyle
+          }
         >
           <Image
             src="/images/excavator.webp"
@@ -224,7 +292,12 @@ export function DepthShowcase() {
         </motion.div>
         <motion.div
           className="depth-photo depth-photo-front"
-          style={reduced ? undefined : { y: frontY, z: 70 }}
+          style={
+            {
+              "--depth-mobile-transform": mobileFrontTransform,
+              ...(reduced ? {} : { y: frontY, z: 70 }),
+            } as MotionStyle
+          }
         >
           <LiquidImage />
           <span className="depth-photo-label">CAMINHÕES · ILUSTRATIVO</span>
@@ -238,6 +311,48 @@ export function DepthShowcase() {
         equipamentos da frota CLJ.
       </p>
     </section>
+  );
+}
+
+function JourneyCard({
+  children,
+  index,
+}: {
+  children: React.ReactNode;
+  index: number;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const direction = index % 2 === 0 ? 1 : -1;
+  const x = useTransform(
+    scrollYProgress,
+    [0, 1],
+    [12 * direction, -10 * direction],
+  );
+  const y = useTransform(scrollYProgress, [0, 1], [24, -24]);
+  const rotation = useTransform(
+    scrollYProgress,
+    [0, 1],
+    [0.7 * direction, -0.4 * direction],
+  );
+  const scale = useTransform(scrollYProgress, [0, 0.45, 1], [0.98, 1, 0.99]);
+  const transform = useMotionTemplate`translate3d(${x}px,${y}px,0) rotate(${rotation}deg) scale(${scale})`;
+  return (
+    <motion.article
+      ref={ref}
+      className={`journey-card journey-card-${index}`}
+      style={
+        {
+          "--journey-mobile-transform": transform,
+          "--journey-mobile-index": index,
+        } as MotionStyle
+      }
+    >
+      {children}
+    </motion.article>
   );
 }
 
@@ -328,10 +443,7 @@ export function EquipmentJourney() {
         </div>
         <div className="journey-stage">
           {items.map((item, index) => (
-            <article
-              key={item.id}
-              className={`journey-card journey-card-${index}`}
-            >
+            <JourneyCard key={item.id} index={index}>
               <div className="journey-photo">
                 <Image
                   src={item.image}
@@ -359,7 +471,7 @@ export function EquipmentJourney() {
                   Solicitar orçamento <ArrowUpRight size={18} />
                 </a>
               </div>
-            </article>
+            </JourneyCard>
           ))}
         </div>
         <p className="journey-disclaimer">

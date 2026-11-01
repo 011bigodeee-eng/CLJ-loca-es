@@ -26,7 +26,7 @@ npm run build
 npm run test:e2e
 ```
 
-Os testes Playwright cobrem 320, 375, 390, 768, 1024 e 1440 px, overflow horizontal, menu, busca, filtros, entrada por categoria, detalhes, retorno de foco, teclado, introdução de sessão, movimento reduzido e composição da mensagem do formulário. Não enviam mensagens reais.
+Os testes Playwright cobrem 320, 360, 375, 390, 430, 768, 1024 e 1440 px, overflow horizontal, menu, busca, filtros, entrada por categoria, detalhes, retorno de foco, teclado, introdução de sessão, movimento reduzido e composição da mensagem do formulário. Não enviam mensagens reais.
 
 No ambiente de nuvem, Chromium está em `/usr/bin/chromium`. Em outra máquina, instale o navegador com `npx playwright install chromium` para usar o navegador gerenciado pelo Playwright. Um executável alternativo pode ser definido em `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
 
@@ -69,13 +69,19 @@ Não há vídeo, analytics, backend ou integração com catálogo externo nesta 
 A introdução já existe no HTML do servidor. `lib/intro-bootstrap.ts` verifica a sessão e movimento reduzido no `<head>`, antes do corpo, sem mostrar a hero e depois cobri-la. O tempo é contado desde essa inicialização: cerca de 2,4 segundos mais 0,35 segundo de saída. A rolagem fica bloqueada e o conteúdo de fundo fica inerte. É possível pular ou usar Escape. Um watchdog de 3 segundos libera o conteúdo se a hidratação falhar; sem JavaScript, o `noscript` mantém a página legível. A introdução não depende de fotos, vídeos ou fontes para terminar.
 
 - `components/cinematic.tsx`: composição 2.5D com fotografias em camadas e perspectiva de mouse; não são modelos 3D reais. Hover líquido só na fotografia, nunca nos textos.
-- `components/liquid-renderer.ts`: shader WebGL importado apenas no hover desktop. Pulso de 900 ms, resolução de render limitada, um contexto por vez. Texturas, buffers, shaders, contexto e RAF são liberados ao terminar, sair da viewport ou abandonar o efeito. Há fallback SVG e imagem estática para touch/movimento reduzido.
-- Vitrine diagonal: GSAP + ScrollTrigger importados apenas perto da seção em desktop com movimento permitido. No mobile e em movimento reduzido, os mesmos itens viram uma sequência estática acessível. Listeners e triggers têm limpeza local.
-- Soluções: os três serviços e seus links originais foram preservados em painéis sticky sobrepostos no desktop; mobile usa painéis verticais.
+- `components/liquid-renderer.ts`: shader WebGL importado apenas no hover desktop. Pulso de 900 ms, resolução de render limitada, um contexto por vez. Texturas, buffers, shaders, contexto e RAF são liberados ao terminar, sair da viewport ou abandonar o efeito. No mobile há máscara SVG por rolagem, sem contexto WebGL; em movimento reduzido há imagem estática.
+- Vitrine diagonal: GSAP + ScrollTrigger importados apenas perto da seção em desktop com movimento permitido. No mobile os mesmos itens usam deslocamentos alternados por rolagem e sticky adaptado; em movimento reduzido permanecem estáticos. Listeners e triggers têm limpeza local.
+- Soluções: os três serviços e seus links originais foram preservados em painéis sticky sobrepostos no desktop; mobile usa sticky adaptado, com fallback vertical em movimento reduzido ou paisagem baixa.
 - Impacto: a fotografia cresce por transformação durante o scroll, sem alterar o fluxo do documento. O componente `OperationMedia` aceita vídeo oficial futuro por `lib/media.ts`; atualmente `videoSrc` é `null`, sem requests de vídeos fictícios.
 - Vídeo futuro: poster sempre presente; reprodução silenciosa apenas perto da viewport, pausa fora dela, fallback em falha/timeout. Em movimento reduzido, economia de dados ou telas pequenas, permanece a fotografia.
-- Cards: imagens maiores, bordas discretas, linha laranja e destaque de ação no hover/foco; informações complementares aparecem diretamente no touch/mobile e em movimento reduzido.
+- Cards: imagens maiores, bordas discretas, linha laranja e destaque de ação no hover/foco; informações essenciais permanecem visíveis; no mobile há opções adicionais de orçamento por toque/foco, além do modal original.
 
 As duas fontes ilustrativas permanecem em 1536 × 1024; não foram substituídas nem ampliadas artificialmente. Next/Image gera AVIF/WebP e variantes até essa largura. Para melhorar a nitidez fullscreen/retina, são necessários arquivos oficiais autorizados de 2560 px ou mais. `public/images/ASSETS.md` registra a auditoria.
 
-Os testes incluem primeira pintura antes da hidratação, sessão repetida, falha de scripts, JavaScript desativado, seis larguras, ausência de erros de console, filtro/modal/formulário, ScrollTrigger, expansão, painéis sticky, fallback SVG, movimento reduzido e shader real com liberação de contexto em Chromium/SwiftShader. A validação local não representa um teste em todos os dispositivos físicos ou uma confirmação do deploy na Vercel.
+Os testes incluem primeira pintura antes da hidratação, sessão repetida, falha de scripts, JavaScript desativado, oito larguras, ausência de erros de console, filtro/modal/formulário, ScrollTrigger, expansão, painéis sticky, fallback SVG, movimento reduzido e shader real com liberação de contexto em Chromium/SwiftShader. A validação local não representa um teste em todos os dispositivos físicos ou uma confirmação do deploy na Vercel.
+
+## Composição e validação mobile
+
+A hero para smartphones usa título de 38–54 px, CTAs de 50 px lado a lado, navbar compacta e o caminhão integrado desde o topo. `app/mobile.css` contém as regras isoladas do desktop, e `components/mobile-motion.tsx` controla preferências, breakpoints e atualização de medidas.
+
+Consulte [a matriz de efeitos e a evidência de testes](docs/mobile.md) para o comportamento de cada breakpoint, comparação do desktop, fallback de aparelhos modestos e a limitação de Safari iOS nativo neste ambiente.

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./cinematic.css";
+import "./mobile.css";
 import { introBootstrap, introCriticalStyles } from "@/lib/intro-bootstrap";
 export const metadata: Metadata = {
   title: "CLJ Locações e Soluções | Caminhões e Equipamentos",

@@ -146,7 +146,9 @@ test("touch and reduced motion keep every card readable with static alternatives
     "true",
   );
   await page.locator("#equipamentos").scrollIntoViewIfNeeded();
-  await expect(page.locator(".card-extra").first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Opções de orçamento: Caminhão prancha" }),
+  ).toBeVisible();
   await expect(page.locator(".liquid-canvas")).toHaveCSS("display", "none");
   await expect(page.locator(".operation-media video")).toHaveCount(0);
 });

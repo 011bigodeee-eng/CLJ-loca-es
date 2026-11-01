@@ -15,6 +15,8 @@ import {
   useScroll,
   useTransform,
   useMotionValue,
+  useMotionTemplate,
+  type MotionStyle,
 } from "framer-motion";
 import {
   ArrowUpRight,
@@ -42,6 +44,10 @@ import {
   type Equipment,
 } from "@/lib/content";
 import { trackIntent } from "@/lib/events";
+import {
+  MobileMotionProvider,
+  useMobileMotion,
+} from "@/components/mobile-motion";
 import {
   DepthShowcase,
   EquipmentJourney,
@@ -147,6 +153,7 @@ function Intro({ onComplete }: { onComplete: () => void }) {
     onComplete();
   }, [onComplete]);
   useLayoutEffect(() => {
+    document.documentElement.dataset.cljHydrated = "true";
     if (!visible) return;
     if (
       document.documentElement.dataset.cljIntro !== "pending" ||
@@ -392,7 +399,7 @@ function Hero({ ready }: { ready: boolean }) {
             alt="Cena ilustrativa gerada por IA: caminhão com equipamento pesado em ambiente industrial"
             fill
             priority
-            sizes="100vw"
+            sizes="(max-width:767px) 1100px, 100vw"
             quality={90}
           />
         </motion.div>
@@ -429,11 +436,27 @@ function Hero({ ready }: { ready: boolean }) {
           operação.
         </p>
         <div className="hero-actions">
-          <a href="#equipamentos" className="button">
-            Explorar equipamentos <ArrowUpRight size={20} />
+          <a
+            href="#equipamentos"
+            className="button"
+            aria-label="Explorar equipamentos"
+          >
+            <span className="desktop-label">Explorar equipamentos</span>
+            <span className="mobile-label" aria-hidden="true">
+              Equipamentos
+            </span>{" "}
+            <ArrowUpRight size={20} />
           </a>
-          <a href="#contato" className="button button-outline">
-            Solicitar orçamento <ArrowRight size={18} />
+          <a
+            href="#contato"
+            className="button button-outline"
+            aria-label="Solicitar orçamento"
+          >
+            <span className="desktop-label">Solicitar orçamento</span>
+            <span className="mobile-label" aria-hidden="true">
+              Orçamento
+            </span>{" "}
+            <ArrowRight size={18} />
           </a>
         </div>
         <div className="hero-note">
@@ -589,6 +612,7 @@ function Catalog() {
   const [category, setCategory] = useState("Todos");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Equipment | null>(null);
+  const [touchOpen, setTouchOpen] = useState<string | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const param = new URLSearchParams(window.location.search).get("categoria");
@@ -741,6 +765,39 @@ function Catalog() {
                   </span>
                 </div>
               </button>
+              <div className="mobile-card-actions">
+                <button
+                  type="button"
+                  className="mobile-options-toggle"
+                  aria-label={`Opções de orçamento: ${item.name}`}
+                  aria-expanded={touchOpen === item.id}
+                  aria-controls={`touch-options-${item.id}`}
+                  onClick={() =>
+                    setTouchOpen(touchOpen === item.id ? null : item.id)
+                  }
+                >
+                  Opções de orçamento <Plus size={16} />
+                </button>
+                {touchOpen === item.id && (
+                  <div
+                    className="mobile-quote-options"
+                    id={`touch-options-${item.id}`}
+                  >
+                    <p>
+                      Modelo, condições e disponibilidade precisam ser
+                      confirmados com a equipe. Este item é demonstrativo.
+                    </p>
+                    <WhatsAppLink
+                      source="mobile-equipment-options"
+                      equipmentId={item.id}
+                      className="button"
+                      message={`Olá! Gostaria de solicitar um orçamento para locação de ${item.name}.`}
+                    >
+                      Solicitar orçamento <ArrowUpRight size={18} />
+                    </WhatsAppLink>
+                  </div>
+                )}
+              </div>
             </Reveal>
           ))}
           <div className="catalog-help">
@@ -836,11 +893,26 @@ function SolutionPanel({
   });
   const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.98, 1, 0.96]);
   const opacity = useTransform(scrollYProgress, [0, 0.65, 1], [1, 1, 0.86]);
+  const mobileScale = useTransform(scrollYProgress, [0, 0.65, 1], [1, 1, 0.96]);
+  const mobileTransform = useMotionTemplate`scale(${mobileScale})`;
+  const mobileOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.65, 1],
+    [1, 1, 0.85],
+  );
   return (
     <motion.article
       ref={ref}
       className="solution-card solution-panel"
-      style={{ top: 110 + index * 18, ...(reduced ? {} : { scale, opacity }) }}
+      style={
+        {
+          top: 110 + index * 18,
+          "--mobile-panel-index": index,
+          "--mobile-panel-transform": mobileTransform,
+          "--mobile-panel-opacity": mobileOpacity,
+          ...(reduced ? {} : { scale, opacity }),
+        } as MotionStyle
+      }
     >
       {children}
     </motion.article>
@@ -963,6 +1035,9 @@ function Impact() {
   });
   const scale = useTransform(scrollYProgress, [0, 0.7, 1], [0.84, 1, 1]);
   const radius = useTransform(scrollYProgress, [0, 0.7], [20, 0]);
+  const mobileScale = useTransform(scrollYProgress, [0, 0.7, 1], [0.85, 1, 1]);
+  const mobileRadius = useTransform(scrollYProgress, [0, 0.7], [22, 0]);
+  const mobileRadiusValue = useMotionTemplate`${mobileRadius}px`;
   return (
     <section
       ref={ref}
@@ -972,7 +1047,13 @@ function Impact() {
       <div className="impact-sticky">
         <motion.div
           className="impact-frame"
-          style={reduced ? undefined : { scale, borderRadius: radius }}
+          style={
+            {
+              "--mobile-expansion-scale": mobileScale,
+              "--mobile-expansion-radius": mobileRadiusValue,
+              ...(reduced ? {} : { scale, borderRadius: radius }),
+            } as MotionStyle
+          }
         >
           <OperationMedia />
           <div className="impact-overlay" />
@@ -1208,7 +1289,8 @@ function Footer() {
   );
 }
 function FloatingContact() {
-  const [hidden, setHidden] = useState(false);
+  const mobile = useMobileMotion();
+  const [hidden, setHidden] = useState(true);
   useEffect(() => {
     const visible = new Set<Element>();
     const observer = new IntersectionObserver(
@@ -1222,10 +1304,14 @@ function FloatingContact() {
       { threshold: 0 },
     );
     document
-      .querySelectorAll("#inicio, .equipment-journey, #contato, .footer")
+      .querySelectorAll(
+        mobile.mobile
+          ? "#inicio, #equipamentos, .equipment-journey, #solucoes, .expanding-impact, #contato, .footer"
+          : "#inicio, .equipment-journey, #contato, .footer",
+      )
       .forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, []);
+  }, [mobile.mobile]);
   return (
     <WhatsAppLink
       source="floating"
@@ -1237,7 +1323,8 @@ function FloatingContact() {
     </WhatsAppLink>
   );
 }
-export default function Site() {
+function SiteContent() {
+  const mobileMotion = useMobileMotion();
   const [heroReady, setHeroReady] = useState(false);
   const finishIntro = useCallback(() => setHeroReady(true), []);
   const cursorX = useMotionValue(0);
@@ -1248,7 +1335,16 @@ export default function Site() {
         Pular para o conteúdo
       </a>
       <Intro onComplete={finishIntro} />
-      <div id="site-content">
+      <div
+        id="site-content"
+        data-mobile-motion={
+          mobileMotion.mobile
+            ? mobileMotion.enabled
+              ? "active"
+              : "static"
+            : undefined
+        }
+      >
         <Header />
         <main
           id="main"
@@ -1293,5 +1389,13 @@ export default function Site() {
         <FloatingContact />
       </div>
     </>
+  );
+}
+
+export default function Site() {
+  return (
+    <MobileMotionProvider>
+      <SiteContent />
+    </MobileMotionProvider>
   );
 }

@@ -9,16 +9,16 @@ export const introBootstrap = `(function(){
   if(!skip){
     window.__cljIntroStart=performance.now();
     try { sessionStorage.setItem('clj-intro','seen'); } catch(e) {}
-    window.setTimeout(function(){
-      if((root.dataset.cljIntro==='pending'||root.dataset.cljIntro==='exiting')){
-        root.dataset.cljIntro='skip';
-        root.dataset.cljFallback='true';
-        var shell=document.getElementById('site-content');
-        if(shell) shell.inert=false;
-        window.dispatchEvent(new Event('clj:intro-timeout'));
-      }
-    },3000);
   }
+  window.setTimeout(function(){
+    if(root.dataset.cljHydrated!=='true'||root.dataset.cljIntro==='pending'||root.dataset.cljIntro==='exiting'){
+      root.dataset.cljIntro='skip';
+      root.dataset.cljFallback='true';
+      var shell=document.getElementById('site-content');
+      if(shell) shell.inert=false;
+      window.dispatchEvent(new Event('clj:intro-timeout'));
+    }
+  },3000);
 })();`;
 export const introCriticalStyles = `
 .intro{position:fixed;inset:0;z-index:10000;background:#000;}
