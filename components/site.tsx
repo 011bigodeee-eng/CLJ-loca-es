@@ -1,7 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   AnimatePresence,
   motion,
@@ -36,6 +42,11 @@ import {
   type Equipment,
 } from "@/lib/content";
 import { trackIntent } from "@/lib/events";
+import {
+  DepthShowcase,
+  EquipmentJourney,
+  OperationMedia,
+} from "@/components/cinematic";
 
 function Brand({ footer = false }: { footer?: boolean }) {
   return (
@@ -84,18 +95,37 @@ function Reveal({
   children,
   className = "",
   delay = 0,
+  variant = "default",
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
+  variant?: "default" | "image";
 }) {
   const reduced = useReducedMotion();
   return (
     <motion.div
       className={`reveal ${className}`}
-      initial={reduced ? false : { opacity: 0, y: 24 }}
+      initial={
+        reduced
+          ? false
+          : {
+              opacity: 0,
+              y: 24,
+              ...(variant === "image"
+                ? { clipPath: "inset(8% 0% 8% 0%)" }
+                : {}),
+            }
+      }
       animate={reduced ? { opacity: 1, y: 0 } : undefined}
-      whileInView={{ opacity: 1, y: 0 }}
+      whileInView={{
+        opacity: 1,
+        y: 0,
+        ...(variant === "image" ? { clipPath: "inset(0% 0% 0% 0%)" } : {}),
+      }}
+      onViewportEnter={(entry) =>
+        entry?.target.setAttribute("data-revealed", "true")
+      }
       viewport={{ once: true, margin: "-40px" }}
       transition={{
         duration: reduced ? 0 : 0.65,
@@ -108,27 +138,65 @@ function Reveal({
   );
 }
 function Intro({ onComplete }: { onComplete: () => void }) {
-  const [visible, setVisible] = useState(false);
-  const reduced = useReducedMotion();
-  useEffect(() => {
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem("clj-intro") === "seen";
-      sessionStorage.setItem("clj-intro", "seen");
-    } catch {
-      /* Storage may be unavailable in private browsing. */
-    }
-    if (seen || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      onComplete();
+  const [visible, setVisible] = useState(true);
+  const controls = useRef<HTMLDivElement>(null);
+  const finish = useCallback(() => {
+    if (document.documentElement.dataset.cljIntro === "pending")
+      document.documentElement.dataset.cljIntro = "exiting";
+    setVisible(false);
+    onComplete();
+  }, [onComplete]);
+  useLayoutEffect(() => {
+    if (!visible) return;
+    if (
+      document.documentElement.dataset.cljIntro !== "pending" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      finish();
       return;
     }
-    setVisible(true);
-    const timer = window.setTimeout(() => {
-      setVisible(false);
-      onComplete();
-    }, 2400);
-    return () => window.clearTimeout(timer);
-  }, [onComplete]);
+    const shell = document.getElementById("site-content");
+    if (shell) shell.inert = true;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    controls.current
+      ?.querySelector<HTMLButtonElement>("button")
+      ?.focus({ preventScroll: true });
+    const started =
+      (window as Window & { __cljIntroStart?: number }).__cljIntroStart ??
+      performance.now();
+    const timer = window.setTimeout(
+      finish,
+      Math.max(0, 2400 - (performance.now() - started)),
+    );
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") finish();
+      if (event.key === "Tab") {
+        const buttons =
+          controls.current?.querySelectorAll<HTMLButtonElement>("button");
+        if (!buttons?.length) return;
+        if (event.shiftKey && document.activeElement === buttons[0]) {
+          event.preventDefault();
+          buttons[buttons.length - 1].focus();
+        } else if (
+          !event.shiftKey &&
+          document.activeElement === buttons[buttons.length - 1]
+        ) {
+          event.preventDefault();
+          buttons[0].focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("clj:intro-timeout", finish);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("clj:intro-timeout", finish);
+      if (shell) shell.inert = false;
+      if (previousFocus && previousFocus !== document.body)
+        previousFocus.focus({ preventScroll: true });
+    };
+  }, [finish, visible]);
   function playSound() {
     // Original synthesized industrial tone; this handler is the only audio entry point.
     const ctx = new AudioContext();
@@ -152,45 +220,33 @@ function Intro({ onComplete }: { onComplete: () => void }) {
     };
   }
   return (
-    <AnimatePresence>
-      {visible && !reduced && (
+    <AnimatePresence
+      onExitComplete={() => {
+        document.documentElement.dataset.cljIntro = "skip";
+      }}
+    >
+      {visible && (
         <motion.div
           className="intro"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.35 } }}
           aria-label="Introdução CLJ"
+          role="dialog"
+          aria-modal="true"
         >
           <div className="intro-beam" />
-          <motion.span
-            className="intro-logo"
-            initial={{
-              opacity: 0,
-              y: 12,
-              scale: 0.94,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-              scale: 1,
-            }}
-            transition={{ duration: 1.3, delay: 0.25 }}
-          >
+          <span className="intro-logo">
             <span className="intro-metal" data-text="CLJ">
               CLJ
             </span>
             <span>.</span>
-          </motion.span>
+          </span>
           <p>FORÇA QUE MOVE. SOLUÇÕES QUE CONECTAM.</p>
-          <div className="intro-controls">
+          <div className="intro-controls" ref={controls}>
             <button onClick={playSound}>
               <Volume2 size={15} /> Ativar som
             </button>
-            <button
-              onClick={() => {
-                setVisible(false);
-                onComplete();
-              }}
-            >
+            <button onClick={finish}>
               Pular introdução <ArrowRight size={15} />
             </button>
           </div>
@@ -403,7 +459,7 @@ function Hero({ ready }: { ready: boolean }) {
 function About() {
   return (
     <section id="sobre" className="section about container">
-      <Reveal className="about-image">
+      <Reveal className="about-image" variant="image">
         <Image
           src="/images/excavator.webp"
           alt="Escavadeira ilustrativa em cenário industrial, imagem gerada por IA"
@@ -677,6 +733,9 @@ function Catalog() {
                   <span className="card-category">{item.category}</span>
                   <h3>{item.name}</h3>
                   <p>{item.description}</p>
+                  <span className="card-extra">
+                    Modelo e condições a confirmar com a equipe.
+                  </span>
                   <span className="card-link">
                     Consultar disponibilidade <ArrowUpRight size={20} />
                   </span>
@@ -762,6 +821,31 @@ const solutions = [
     category: "Transporte",
   },
 ];
+function SolutionPanel({
+  children,
+  index,
+}: {
+  children: React.ReactNode;
+  index: number;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const reduced = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.98, 1, 0.96]);
+  const opacity = useTransform(scrollYProgress, [0, 0.65, 1], [1, 1, 0.86]);
+  return (
+    <motion.article
+      ref={ref}
+      className="solution-card solution-panel"
+      style={{ top: 110 + index * 18, ...(reduced ? {} : { scale, opacity }) }}
+    >
+      {children}
+    </motion.article>
+  );
+}
 function Solutions() {
   return (
     <section id="solucoes" className="section solutions container">
@@ -782,15 +866,15 @@ function Solutions() {
           um ponto de contato para o seu próximo projeto.
         </p>
       </Reveal>
-      <div className="solutions-grid">
+      <div className="solutions-grid solutions-stack">
         {solutions.map(({ number, title, icon: Icon, text, category }, i) => (
-          <Reveal className="solution-card" key={title} delay={i * 0.1}>
+          <SolutionPanel key={title} index={i}>
             <div className="solution-photo">
               <Image
                 src={i === 1 ? "/images/excavator.webp" : "/images/truck.webp"}
                 alt={`Cena ilustrativa de ${title.toLowerCase()} gerada por IA`}
                 fill
-                sizes="(max-width: 768px) 100vw, 33vw"
+                sizes="(max-width: 768px) 100vw, 75vw"
               />
             </div>
             <div className="solution-top">
@@ -809,7 +893,7 @@ function Solutions() {
               </a>
             </div>
             <span className="solution-demo">IMAGEM ILUSTRATIVA · IA</span>
-          </Reveal>
+          </SolutionPanel>
         ))}
       </div>
     </section>
@@ -875,39 +959,41 @@ function Impact() {
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: ref,
-    offset: ["start end", "end start"],
+    offset: ["start 85%", "end 70%"],
   });
-  const scale = useTransform(scrollYProgress, [0, 1], [1.1, 1]);
+  const scale = useTransform(scrollYProgress, [0, 0.7, 1], [0.84, 1, 1]);
+  const radius = useTransform(scrollYProgress, [0, 0.7], [20, 0]);
   return (
-    <section ref={ref} className="impact">
-      <motion.div
-        className="impact-image"
-        style={reduced ? undefined : { scale }}
-      >
-        <Image
-          src="/images/excavator.webp"
-          fill
-          sizes="100vw"
-          alt="Escavadeira em paisagem cinematográfica, imagem ilustrativa gerada por IA"
-        />
-      </motion.div>
-      <div className="impact-overlay" />
-      <Reveal className="impact-content container">
-        <div className="eyebrow">
-          O SEU PRÓXIMO PROJETO COMEÇA COM UMA CONVERSA.
-        </div>
-        <h2>
-          SUA OPERAÇÃO
-          <br />
-          <span>NÃO PODE PARAR.</span>
-        </h2>
-        <WhatsAppLink className="button" source="impact">
-          FALE COM A CLJ <ArrowUpRight size={21} />
-        </WhatsAppLink>
-      </Reveal>
-      <span className="image-caption impact-caption">
-        IMAGEM ILUSTRATIVA · GERADA POR IA
-      </span>
+    <section
+      ref={ref}
+      className="impact expanding-impact"
+      aria-label="Sua operação não pode parar"
+    >
+      <div className="impact-sticky">
+        <motion.div
+          className="impact-frame"
+          style={reduced ? undefined : { scale, borderRadius: radius }}
+        >
+          <OperationMedia />
+          <div className="impact-overlay" />
+          <Reveal className="impact-content container">
+            <div className="eyebrow">
+              O SEU PRÓXIMO PROJETO COMEÇA COM UMA CONVERSA.
+            </div>
+            <h2>
+              SUA OPERAÇÃO
+              <br />
+              <span>NÃO PODE PARAR.</span>
+            </h2>
+            <WhatsAppLink className="button" source="impact">
+              FALE COM A CLJ <ArrowUpRight size={21} />
+            </WhatsAppLink>
+          </Reveal>
+          <span className="image-caption impact-caption">
+            IMAGEM ILUSTRATIVA · GERADA POR IA
+          </span>
+        </motion.div>
+      </div>
       <div className="industrial-tape">
         <span>
           FORÇA QUE MOVE <Plus size={22} /> SOLUÇÕES QUE CONECTAM{" "}
@@ -1136,7 +1222,7 @@ function FloatingContact() {
       { threshold: 0 },
     );
     document
-      .querySelectorAll("#inicio, #contato, .footer")
+      .querySelectorAll("#inicio, .equipment-journey, #contato, .footer")
       .forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, []);
@@ -1162,45 +1248,50 @@ export default function Site() {
         Pular para o conteúdo
       </a>
       <Intro onComplete={finishIntro} />
-      <Header />
-      <main
-        id="main"
-        onPointerMove={(e) => {
-          if (
-            e.pointerType === "mouse" &&
-            window.matchMedia("(pointer: fine)").matches
-          ) {
-            cursorX.set(e.clientX);
-            cursorY.set(e.clientY);
-          }
-        }}
-      >
-        <motion.div
-          className="cursor-light"
-          aria-hidden="true"
-          style={{ left: cursorX, top: cursorY }}
-        />
-        <Hero ready={heroReady} />
-        <div className="demo-strip">
-          <div className="container">
-            <span>
-              <span className="status-dot" /> UMA PRÉVIA DO QUE PODEMOS
-              CONSTRUIR JUNTOS.
-            </span>
-            <span>
-              Conteúdo e equipamentos demonstrativos <ArrowUpRight size={15} />
-            </span>
+      <div id="site-content">
+        <Header />
+        <main
+          id="main"
+          onPointerMove={(e) => {
+            if (
+              e.pointerType === "mouse" &&
+              window.matchMedia("(pointer: fine)").matches
+            ) {
+              cursorX.set(e.clientX);
+              cursorY.set(e.clientY);
+            }
+          }}
+        >
+          <motion.div
+            className="cursor-light"
+            aria-hidden="true"
+            style={{ left: cursorX, top: cursorY }}
+          />
+          <Hero ready={heroReady} />
+          <div className="demo-strip">
+            <div className="container">
+              <span>
+                <span className="status-dot" /> UMA PRÉVIA DO QUE PODEMOS
+                CONSTRUIR JUNTOS.
+              </span>
+              <span>
+                Conteúdo e equipamentos demonstrativos{" "}
+                <ArrowUpRight size={15} />
+              </span>
+            </div>
           </div>
-        </div>
-        <About />
-        <Catalog />
-        <Solutions />
-        <Process />
-        <Impact />
-        <Contact />
-      </main>
-      <Footer />
-      <FloatingContact />
+          <About />
+          <DepthShowcase />
+          <Catalog />
+          <EquipmentJourney />
+          <Solutions />
+          <Process />
+          <Impact />
+          <Contact />
+        </main>
+        <Footer />
+        <FloatingContact />
+      </div>
     </>
   );
 }

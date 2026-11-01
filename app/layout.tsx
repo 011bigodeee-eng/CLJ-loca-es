@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./cinematic.css";
+import { introBootstrap, introCriticalStyles } from "@/lib/intro-bootstrap";
 export const metadata: Metadata = {
   title: "CLJ Locações e Soluções | Caminhões e Equipamentos",
   description:
@@ -25,10 +27,17 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: introCriticalStyles }} />
+        <script
+          id="clj-intro-bootstrap"
+          dangerouslySetInnerHTML={{ __html: introBootstrap }}
+        />
+      </head>
       <body>
         <noscript>
-          <style>{`.reveal { opacity: 1 !important; transform: none !important; } .hero-line, .hero-image-frame { transform: none !important; }`}</style>
+          <style>{`.intro { display:none!important; } html,body { overflow:auto!important; } .reveal { opacity: 1 !important; transform: none !important; } .hero-line, .hero-image-frame { transform: none !important; }`}</style>
         </noscript>
         {children}
       </body>

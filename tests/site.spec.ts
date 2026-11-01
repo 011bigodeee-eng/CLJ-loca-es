@@ -158,7 +158,7 @@ test("form validates and formats a message without sending data", async ({
 });
 
 test("intro can be skipped and appears once per session", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(
     page.getByRole("button", { name: "Pular introdução" }),
   ).toBeVisible();
@@ -232,7 +232,7 @@ test("accessibility of the full page and equipment dialog", async ({
 test("cinematic intro finishes within three seconds and hero exposes three lines", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".intro")).toBeVisible();
   await expect(page.locator(".intro")).toHaveCount(0, { timeout: 3000 });
   await expect(page.locator(".hero-line")).toHaveCount(3);

@@ -34,7 +34,7 @@ No ambiente de nuvem, Chromium está em `/usr/bin/chromium`. Em outra máquina, 
 
 - `lib/content.ts`: dados da empresa, telefone, categorias, equipamentos e imagens. Todos os equipamentos são demonstrativos; não há preços, capacidade ou disponibilidade inventados.
 - `components/site.tsx`: navegação, introdução de até 2,75 segundos, seções, catálogo, modal e formulário. O som é sintetizado localmente e só toca com clique explícito. A introdução aparece uma vez por sessão, pode ser pulada e é omitida com movimento reduzido.
-- `app/globals.css`: identidade visual, layouts e efeitos responsivos. Elementos 3D leves usam CSS, sem WebGL, GSAP ou bibliotecas adicionais de renderização.
+- `app/globals.css` e `app/cinematic.css`: identidade visual, layouts e efeitos responsivos. A composição 2.5D usa fotografias em camadas; o efeito líquido usa um shader WebGL curto com fallback SVG. GSAP/ScrollTrigger é carregado sob demanda na vitrine diagonal desktop.
 - `public/images/ASSETS.md`: origem dos assets e orientações para substituição. As capturas recebidas não foram reutilizadas como fotografias públicas. Vídeo não fornecido; há fallback fotográfico otimizado.
 - Catálogo aceita links como `/?categoria=Transporte#equipamentos`. Categorias possuem URLs compartilháveis para futuras campanhas.
 - Formulário valida os dados e abre uma mensagem no WhatsApp. O usuário precisa revisar e enviar no WhatsApp; não há backend de envio nem confirmação falsa. Nenhum campo é armazenado no site.
@@ -64,8 +64,18 @@ Este trabalho não executa deploy nem envia alterações ao GitHub automaticamen
 
 Não há vídeo, analytics, backend ou integração com catálogo externo nesta prévia. O catálogo é editável no arquivo de dados, conforme solicitado.
 
-## Refinamento premium
+## Experiência cinematográfica
 
-A identidade e as duas imagens originais foram preservadas. A hero agora tem revelação sequencial por máscaras, zoom de entrada sincronizado com o encerramento da introdução e iluminação ambiente. A introdução dura no máximo 2,75 segundos, incluindo a saída, com feixe laranja e varredura metálica; o áudio continua exclusivamente opt-in.
+A introdução já existe no HTML do servidor. `lib/intro-bootstrap.ts` verifica a sessão e movimento reduzido no `<head>`, antes do corpo, sem mostrar a hero e depois cobri-la. O tempo é contado desde essa inicialização: cerca de 2,4 segundos mais 0,35 segundo de saída. A rolagem fica bloqueada e o conteúdo de fundo fica inerte. É possível pular ou usar Escape. Um watchdog de 3 segundos libera o conteúdo se a hidratação falhar; sem JavaScript, o `noscript` mantém a página legível. A introdução não depende de fotos, vídeos ou fontes para terminar.
 
-A vitrine recebeu transição de filtros e profundidade controlada pelo ponteiro apenas no desktop. Em telas pequenas, os efeitos são simplificados, os CTAs reorganizados e o botão de WhatsApp é recolhido automaticamente quando a hero, o contato ou o rodapé estão visíveis. O indicador decorativo 01/06 foi removido. Não foram adicionadas bibliotecas ou rastreadores.
+- `components/cinematic.tsx`: composição 2.5D com fotografias em camadas e perspectiva de mouse; não são modelos 3D reais. Hover líquido só na fotografia, nunca nos textos.
+- `components/liquid-renderer.ts`: shader WebGL importado apenas no hover desktop. Pulso de 900 ms, resolução de render limitada, um contexto por vez. Texturas, buffers, shaders, contexto e RAF são liberados ao terminar, sair da viewport ou abandonar o efeito. Há fallback SVG e imagem estática para touch/movimento reduzido.
+- Vitrine diagonal: GSAP + ScrollTrigger importados apenas perto da seção em desktop com movimento permitido. No mobile e em movimento reduzido, os mesmos itens viram uma sequência estática acessível. Listeners e triggers têm limpeza local.
+- Soluções: os três serviços e seus links originais foram preservados em painéis sticky sobrepostos no desktop; mobile usa painéis verticais.
+- Impacto: a fotografia cresce por transformação durante o scroll, sem alterar o fluxo do documento. O componente `OperationMedia` aceita vídeo oficial futuro por `lib/media.ts`; atualmente `videoSrc` é `null`, sem requests de vídeos fictícios.
+- Vídeo futuro: poster sempre presente; reprodução silenciosa apenas perto da viewport, pausa fora dela, fallback em falha/timeout. Em movimento reduzido, economia de dados ou telas pequenas, permanece a fotografia.
+- Cards: imagens maiores, bordas discretas, linha laranja e destaque de ação no hover/foco; informações complementares aparecem diretamente no touch/mobile e em movimento reduzido.
+
+As duas fontes ilustrativas permanecem em 1536 × 1024; não foram substituídas nem ampliadas artificialmente. Next/Image gera AVIF/WebP e variantes até essa largura. Para melhorar a nitidez fullscreen/retina, são necessários arquivos oficiais autorizados de 2560 px ou mais. `public/images/ASSETS.md` registra a auditoria.
+
+Os testes incluem primeira pintura antes da hidratação, sessão repetida, falha de scripts, JavaScript desativado, seis larguras, ausência de erros de console, filtro/modal/formulário, ScrollTrigger, expansão, painéis sticky, fallback SVG, movimento reduzido e shader real com liberação de contexto em Chromium/SwiftShader. A validação local não representa um teste em todos os dispositivos físicos ou uma confirmação do deploy na Vercel.

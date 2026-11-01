@@ -2671,3 +2671,25 @@ section[id] {
 .intro-logo .intro-metal {
   -webkit-text-fill-color: transparent;
 }
+/* Pre-paint intro: the layer exists in SSR; storage is checked in the head. */
+.intro {
+  z-index: 10000;
+  background: #000;
+  pointer-events: auto;
+}
+.intro-logo {
+  animation: intro-arrive 1.25s 0.18s both;
+}
+@keyframes intro-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+html[data-clj-intro="pending"] #site-content {
+  pointer-events: none;
+}
