@@ -33,7 +33,7 @@ No ambiente de nuvem, Chromium está em `/usr/bin/chromium`. Em outra máquina, 
 ## Conteúdo e funcionalidades
 
 - `lib/content.ts`: dados da empresa, telefone, categorias, equipamentos e imagens. Todos os equipamentos são demonstrativos; não há preços, capacidade ou disponibilidade inventados.
-- `components/site.tsx`: navegação, introdução de 2,5 segundos, seções, catálogo, modal e formulário. O som é sintetizado localmente e só toca com clique explícito. A introdução aparece uma vez por sessão, pode ser pulada e é omitida com movimento reduzido.
+- `components/site.tsx`: navegação, introdução de até 2,75 segundos, seções, catálogo, modal e formulário. O som é sintetizado localmente e só toca com clique explícito. A introdução aparece uma vez por sessão, pode ser pulada e é omitida com movimento reduzido.
 - `app/globals.css`: identidade visual, layouts e efeitos responsivos. Elementos 3D leves usam CSS, sem WebGL, GSAP ou bibliotecas adicionais de renderização.
 - `public/images/ASSETS.md`: origem dos assets e orientações para substituição. As capturas recebidas não foram reutilizadas como fotografias públicas. Vídeo não fornecido; há fallback fotográfico otimizado.
 - Catálogo aceita links como `/?categoria=Transporte#equipamentos`. Categorias possuem URLs compartilháveis para futuras campanhas.
@@ -63,3 +63,9 @@ Este trabalho não executa deploy nem envia alterações ao GitHub automaticamen
 - Definir campanhas e consentimento antes de instalar Google Ads, Meta Pixel ou outro rastreador.
 
 Não há vídeo, analytics, backend ou integração com catálogo externo nesta prévia. O catálogo é editável no arquivo de dados, conforme solicitado.
+
+## Refinamento premium
+
+A identidade e as duas imagens originais foram preservadas. A hero agora tem revelação sequencial por máscaras, zoom de entrada sincronizado com o encerramento da introdução e iluminação ambiente. A introdução dura no máximo 2,75 segundos, incluindo a saída, com feixe laranja e varredura metálica; o áudio continua exclusivamente opt-in.
+
+A vitrine recebeu transição de filtros e profundidade controlada pelo ponteiro apenas no desktop. Em telas pequenas, os efeitos são simplificados, os CTAs reorganizados e o botão de WhatsApp é recolhido automaticamente quando a hero, o contato ou o rodapé estão visíveis. O indicador decorativo 01/06 foi removido. Não foram adicionadas bibliotecas ou rastreadores.

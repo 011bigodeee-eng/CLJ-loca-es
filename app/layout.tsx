@@ -28,7 +28,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body>
         <noscript>
-          <style>{`.reveal { opacity: 1 !important; transform: none !important; }`}</style>
+          <style>{`.reveal { opacity: 1 !important; transform: none !important; } .hero-line, .hero-image-frame { transform: none !important; }`}</style>
         </noscript>
         {children}
       </body>

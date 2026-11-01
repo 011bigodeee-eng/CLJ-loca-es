@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -107,7 +107,7 @@ function Reveal({
     </motion.div>
   );
 }
-function Intro() {
+function Intro({ onComplete }: { onComplete: () => void }) {
   const [visible, setVisible] = useState(false);
   const reduced = useReducedMotion();
   useEffect(() => {
@@ -118,12 +118,17 @@ function Intro() {
     } catch {
       /* Storage may be unavailable in private browsing. */
     }
-    if (seen || window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+    if (seen || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onComplete();
       return;
+    }
     setVisible(true);
-    const timer = window.setTimeout(() => setVisible(false), 2500);
+    const timer = window.setTimeout(() => {
+      setVisible(false);
+      onComplete();
+    }, 2400);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [onComplete]);
   function playSound() {
     // Original synthesized industrial tone; this handler is the only audio entry point.
     const ctx = new AudioContext();
@@ -160,24 +165,32 @@ function Intro() {
             className="intro-logo"
             initial={{
               opacity: 0,
-              letterSpacing: ".25em",
-              filter: "blur(12px)",
+              y: 12,
+              scale: 0.94,
             }}
             animate={{
               opacity: 1,
-              letterSpacing: "-.07em",
-              filter: "blur(0px)",
+              y: 0,
+              scale: 1,
             }}
-            transition={{ duration: 1.4 }}
+            transition={{ duration: 1.3, delay: 0.25 }}
           >
-            CLJ<span>.</span>
+            <span className="intro-metal" data-text="CLJ">
+              CLJ
+            </span>
+            <span>.</span>
           </motion.span>
           <p>FORÇA QUE MOVE. SOLUÇÕES QUE CONECTAM.</p>
           <div className="intro-controls">
             <button onClick={playSound}>
               <Volume2 size={15} /> Ativar som
             </button>
-            <button onClick={() => setVisible(false)}>
+            <button
+              onClick={() => {
+                setVisible(false);
+                onComplete();
+              }}
+            >
               Pular introdução <ArrowRight size={15} />
             </button>
           </div>
@@ -301,43 +314,59 @@ function Header() {
     </header>
   );
 }
-function Hero() {
+function Hero({ ready }: { ready: boolean }) {
   const ref = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
   });
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "14%"]);
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "9%"]);
   return (
     <section id="inicio" ref={ref} className="hero">
       <motion.div className="hero-image" style={reduced ? undefined : { y }}>
-        <Image
-          src="/images/truck.webp"
-          alt="Cena ilustrativa gerada por IA: caminhão com equipamento pesado em ambiente industrial"
-          fill
-          priority
-          sizes="100vw"
-          quality={90}
-        />
+        <motion.div
+          className="hero-image-frame"
+          initial={{ scale: 1.075 }}
+          animate={{ scale: ready || reduced ? 1 : 1.075 }}
+          transition={{ duration: reduced ? 0 : 1.9, ease: [0.2, 0.7, 0.3, 1] }}
+        >
+          <Image
+            src="/images/truck.webp"
+            alt="Cena ilustrativa gerada por IA: caminhão com equipamento pesado em ambiente industrial"
+            fill
+            priority
+            sizes="100vw"
+            quality={90}
+          />
+        </motion.div>
       </motion.div>
+      <div className="hero-ambient" aria-hidden="true" />
       <div className="hero-shade" />
       <div className="hero-grid" />
       <div className="hero-content container">
         <div className="eyebrow">
           <span className="status-dot" /> FORÇA QUE MOVE. SOLUÇÕES QUE CONECTAM.
         </div>
-        <motion.h1
-          initial={reduced ? false : { opacity: 0, y: 25 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, delay: 0.2 }}
-        >
-          POTÊNCIA PARA
-          <br />
-          MOVER SEUS
-          <br />
-          <span>PROJETOS.</span>
-        </motion.h1>
+        <h1 aria-label="POTÊNCIA PARA MOVER SEUS PROJETOS.">
+          {["POTÊNCIA PARA", "MOVER SEUS", "PROJETOS."].map((line, index) => (
+            <span className="hero-line-mask" key={line}>
+              <motion.span
+                className={index === 2 ? "hero-line accent" : "hero-line"}
+                aria-hidden="true"
+                initial={{ y: "110%" }}
+                animate={{ y: ready || reduced ? "0%" : "110%" }}
+                transition={{
+                  duration: reduced ? 0 : 0.85,
+                  delay: reduced ? 0 : 0.12 + index * 0.13,
+                  ease: [0.2, 0.7, 0.3, 1],
+                }}
+              >
+                {line}
+              </motion.span>
+            </span>
+          ))}
+        </h1>
         <p className="hero-description">
           Locação de caminhões, equipamentos e soluções
           <br className="desktop-break" /> para acompanhar cada etapa da sua
@@ -365,9 +394,6 @@ function Hero() {
         </a>
         <span className="image-caption">
           IMAGEM ILUSTRATIVA · GERADA POR IA
-        </span>
-        <span className="hero-index">
-          <b>01</b> / 06
         </span>
       </div>
       <span className="hero-side">CLJ — LOCAÇÕES E SOLUÇÕES</span>
@@ -589,7 +615,13 @@ function Catalog() {
             {filtered.length === 1 ? "possibilidade" : "possibilidades"}
           </span>
         </div>
-        <div className="equipment-grid">
+        <motion.div
+          className="equipment-grid"
+          key={filtered.map((item) => item.id).join(",")}
+          initial={{ opacity: 0.45, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
           {filtered.map((item, index) => (
             <Reveal
               key={item.id}
@@ -598,6 +630,29 @@ function Catalog() {
             >
               <button
                 className="card-main"
+                onPointerMove={(event) => {
+                  if (
+                    event.pointerType !== "mouse" ||
+                    !window.matchMedia(
+                      "(min-width: 1024px) and (prefers-reduced-motion: no-preference)",
+                    ).matches
+                  )
+                    return;
+                  const card = event.currentTarget;
+                  const rect = card.getBoundingClientRect();
+                  card.style.setProperty(
+                    "--tilt-x",
+                    `${((event.clientY - rect.top - rect.height / 2) / rect.height) * -3}deg`,
+                  );
+                  card.style.setProperty(
+                    "--tilt-y",
+                    `${((event.clientX - rect.left - rect.width / 2) / rect.width) * 3}deg`,
+                  );
+                }}
+                onPointerLeave={(event) => {
+                  event.currentTarget.style.setProperty("--tilt-x", "0deg");
+                  event.currentTarget.style.setProperty("--tilt-y", "0deg");
+                }}
                 onClick={(event) => {
                   opener.current = event.currentTarget;
                   setSelected(item);
@@ -613,6 +668,7 @@ function Catalog() {
                     style={{ objectPosition: item.position }}
                   />
                   <span className="demo-badge">DEMONSTRATIVO</span>
+                  <span className="card-hover-label">EXPLORAR EQUIPAMENTO</span>
                   <span className="card-expand">
                     <Plus size={22} />
                   </span>
@@ -648,7 +704,7 @@ function Catalog() {
               Falar com a CLJ <ArrowUpRight size={20} />
             </WhatsAppLink>
           </div>
-        </div>
+        </motion.div>
         {filtered.length === 0 && (
           <div className="empty-results">
             <SlidersHorizontal size={28} />
@@ -1065,7 +1121,39 @@ function Footer() {
     </footer>
   );
 }
+function FloatingContact() {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const visible = new Set<Element>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) visible.add(entry.target);
+          else visible.delete(entry.target);
+        });
+        setHidden(visible.size > 0);
+      },
+      { threshold: 0 },
+    );
+    document
+      .querySelectorAll("#inicio, #contato, .footer")
+      .forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <WhatsAppLink
+      source="floating"
+      className={`floating-whatsapp ${hidden ? "floating-hidden" : ""}`}
+    >
+      <MessageCircle size={23} />
+      <span>Fale com a CLJ</span>
+      <span className="sr-only"> pelo WhatsApp, abre em nova aba</span>
+    </WhatsAppLink>
+  );
+}
 export default function Site() {
+  const [heroReady, setHeroReady] = useState(false);
+  const finishIntro = useCallback(() => setHeroReady(true), []);
   const cursorX = useMotionValue(0);
   const cursorY = useMotionValue(0);
   return (
@@ -1073,7 +1161,7 @@ export default function Site() {
       <a className="skip-link" href="#main">
         Pular para o conteúdo
       </a>
-      <Intro />
+      <Intro onComplete={finishIntro} />
       <Header />
       <main
         id="main"
@@ -1092,7 +1180,7 @@ export default function Site() {
           aria-hidden="true"
           style={{ left: cursorX, top: cursorY }}
         />
-        <Hero />
+        <Hero ready={heroReady} />
         <div className="demo-strip">
           <div className="container">
             <span>
@@ -1112,11 +1200,7 @@ export default function Site() {
         <Contact />
       </main>
       <Footer />
-      <WhatsAppLink source="floating" className="floating-whatsapp">
-        <MessageCircle size={23} />
-        <span>Fale com a CLJ</span>
-        <span className="sr-only"> pelo WhatsApp, abre em nova aba</span>
-      </WhatsAppLink>
+      <FloatingContact />
     </>
   );
 }

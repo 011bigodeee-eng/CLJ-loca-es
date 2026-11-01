@@ -6,6 +6,9 @@ for (const width of [320, 375, 390, 768, 1024, 1440]) {
     await page.emulateMedia({ reducedMotion: "reduce" });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "POTÊNCIA PARA",
@@ -224,4 +227,45 @@ test("accessibility of the full page and equipment dialog", async ({
       nodes: v.nodes.map((n) => n.target),
     })),
   ).toEqual([]);
+});
+
+test("cinematic intro finishes within three seconds and hero exposes three lines", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".intro")).toBeVisible();
+  await expect(page.locator(".intro")).toHaveCount(0, { timeout: 3000 });
+  await expect(page.locator(".hero-line")).toHaveCount(3);
+  await expect(page.locator(".hero-index")).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page
+        .locator(".hero-line")
+        .last()
+        .evaluate((element) =>
+          Math.abs(
+            new DOMMatrixReadOnly(getComputedStyle(element).transform).m42,
+          ),
+        ),
+    )
+    .toBeLessThan(1);
+});
+
+test("mobile WhatsApp yields space to contact and keyboard menu closes correctly", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.locator(".floating-whatsapp")).toBeHidden();
+  await page.locator("#sobre").scrollIntoViewIfNeeded();
+  await expect(page.locator(".floating-whatsapp")).toBeVisible();
+  await page.getByRole("button", { name: "Abrir menu" }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Abrir menu" })).toBeFocused();
+  await page.locator("#contato").scrollIntoViewIfNeeded();
+  await expect(page.locator(".floating-whatsapp")).toBeHidden();
+  await page.getByLabel("Seu nome").focus();
+  const field = await page.getByLabel("Seu nome").boundingBox();
+  expect(field!.y + field!.height).toBeLessThan(812);
 });
